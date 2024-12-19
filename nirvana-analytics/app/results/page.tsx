@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { HealthScoreWidget } from '@/components/health-score-widget'
 import { Button } from '@/components/ui/button'
 import type { HealthAnalysis, HealthDataInput } from '@/lib/utils'
@@ -8,31 +9,37 @@ import { useRouter } from 'next/navigation'
 
 export default function ResultsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [analysis, setAnalysis] = useState<HealthAnalysis | null>(null)
   const [healthData, setHealthData] = useState<HealthDataInput | null>(null)
   const [error, setError] = useState<string>('')
 
   useEffect(() => {
-    try {
-      // Retrieve analysis and health data from localStorage
-      const storedAnalysis = localStorage.getItem('healthAnalysis')
-      const storedHealthData = localStorage.getItem('healthData')
+    async function fetchData() {
+      try {
+        const userId = searchParams.get('userId')
+        if (!userId) {
+          throw new Error('No userId provided')
+        }
 
-      console.log('Retrieved from localStorage:', { storedAnalysis, storedHealthData })
+        // Fetch data from API instead of direct MongoDB access
+        const response = await fetch(`/api/results?userId=${userId}`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch results')
+        }
 
-      if (!storedAnalysis || !storedHealthData) {
-        throw new Error('No analysis data found')
+        const data = await response.json()
+        setHealthData(data.healthData)
+        setAnalysis(data.analysis)
+      } catch (error) {
+        console.error('Results page error:', error)
+        setError(error.message || 'Failed to load analysis results')
+        setTimeout(() => router.push('/'), 2000)
       }
-
-      setAnalysis(JSON.parse(storedAnalysis))
-      setHealthData(JSON.parse(storedHealthData))
-    } catch (error) {
-      console.error('Results page error:', error)
-      setError('Failed to load analysis results')
-      // Redirect back to form after a short delay
-      setTimeout(() => router.push('/'), 2000)
     }
-  }, [router])
+
+    fetchData()
+  }, [searchParams, router])
 
   const handleDownloadReport = async () => {
     try {

@@ -38,7 +38,7 @@ export const CHRONIC_CONDITIONS = [
 
 // Updated schema
 export const HealthDataInputSchema = z.object({
-  patientId: z.string().min(1, 'Patient ID is required'),
+  userId: z.string().min(1, 'User ID is required'),
   name: z.string().min(1, 'Name is required'),
   dateOfBirth: z.date({
     required_error: "Date of birth is required",
@@ -97,6 +97,7 @@ export const healthScoreCategorySchema = z.object({
 })
 
 export const healthAnalysisSchema = z.object({
+  userId: z.string().min(1, 'User ID is required'),
   overallHealthScore: healthScoreCategorySchema,
   cholesterolLevels: healthScoreCategorySchema,
   diabetesRisk: healthScoreCategorySchema,

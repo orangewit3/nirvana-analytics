@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getHealthData, storeHealthAnalysis } from '@/lib/db'
 import { healthAnalysisSchema } from '@/lib/utils'
 import OpenAI from 'openai'
 
@@ -8,7 +9,25 @@ const openai = new OpenAI({
 
 export async function POST(req: NextRequest) {
   try {
-    const healthData = await req.json()
+    // Get userId from query params
+    const { searchParams } = new URL(req.url)
+    const userId = searchParams.get('userId')
+    
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'userId is required' },
+        { status: 400 }
+      )
+    }
+
+    // Get health data from MongoDB
+    const healthData = await getHealthData(userId)
+    if (!healthData) {
+      return NextResponse.json(
+        { error: 'Health data not found' },
+        { status: 404 }
+      )
+    }
     
     // Calculate BMI
     const bmi = healthData.weight / Math.pow(healthData.height / 100, 2)
@@ -92,8 +111,13 @@ Example response format:
 
     // Parse and validate the response
     const parsedAnalysis = JSON.parse(analysis)
-    const validatedAnalysis = healthAnalysisSchema.parse(parsedAnalysis)
-    console.log(validatedAnalysis)
+    const validatedAnalysis = healthAnalysisSchema.parse({
+      userId,
+      ...parsedAnalysis
+    })
+
+    // Store the analysis in MongoDB
+    await storeHealthAnalysis(userId, validatedAnalysis)
 
     return NextResponse.json(validatedAnalysis)
   } catch (error) {

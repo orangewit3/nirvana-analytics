@@ -95,21 +95,29 @@ export function HealthForm() {
       const age = calculateAge(data.dateOfBirth)
 
       // Convert form data to HealthDataInput
-      const healthData: HealthDataInput = {
-        patientId: nanoid(),
+      const userId = nanoid()
+      const healthData = {
+        userId,
         name: data.name,
-        dateOfBirth: data.dateOfBirth,
+        dateOfBirth: data.dateOfBirth.toISOString(),
         age,
+        sex: data.sex || 'M',
         height: data.height,
         weight: data.weight,
+        address: {
+          area: data.area || 'Menteng',
+          otherArea: data.otherArea
+        },
+        bloodPressure: data.bloodPressure,
+        chronicConditions: data.chronicConditions || [],
+        otherChronicCondition: data.otherChronicCondition,
+        allergies: data.allergies,
         bloodReportText: parsedPdfText || '',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       }
 
-      console.log('Sending health data:', healthData)
-
-      // Send data for analysis
-      const response = await fetch('/api/analyze', {
+      // Store health data via API
+      const storeResponse = await fetch('/api/store-health-data', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -117,27 +125,22 @@ export function HealthForm() {
         body: JSON.stringify(healthData),
       })
 
-      console.log('Analysis response status:', response.status)
-      const responseText = await response.text()
-      console.log('Analysis response text:', responseText)
-
-      if (!response.ok) {
-        throw new Error(`Analysis failed: ${responseText}`)
+      if (!storeResponse.ok) {
+        const errorData = await storeResponse.json()
+        throw new Error(errorData.error || 'Failed to store health data')
       }
 
-      const analysis = JSON.parse(responseText)
-      
-      // Store both the input data and analysis results
-      localStorage.setItem('healthData', JSON.stringify(healthData))
-      localStorage.setItem('healthAnalysis', JSON.stringify(analysis))
-      
-      console.log('Stored data:', {
-        healthData: JSON.parse(localStorage.getItem('healthData') || '{}'),
-        analysis: JSON.parse(localStorage.getItem('healthAnalysis') || '{}')
+      // Send userId for analysis
+      const response = await fetch(`/api/analyze?userId=${userId}`, {
+        method: 'POST',
       })
 
-      // Use Next.js router for navigation
-      window.location.href = '/results'
+      if (!response.ok) {
+        throw new Error(`Analysis failed: ${await response.text()}`)
+      }
+
+      // Redirect to results page with userId
+      window.location.href = `/results?userId=${userId}`
     } catch (error) {
       console.error('Submit error:', error)
       setError(error.message || 'An error occurred. Please try again.')
