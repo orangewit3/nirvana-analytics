@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    // Create user
+    // Create user with ObjectId
     const result = await usersCollection.insertOne({
       name,
       email,
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       message: 'User created successfully',
-      userId: result.insertedId,
+      userId: result.insertedId.toString(), // MongoDB ObjectId as string
     })
   } catch (error) {
     console.error('Registration error:', error)

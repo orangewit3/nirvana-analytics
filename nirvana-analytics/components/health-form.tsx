@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
@@ -92,12 +92,16 @@ export function HealthForm() {
       setError('')
       setIsLoading(true)
 
+      if (!session?.user?.id) {
+        throw new Error('Not authenticated')
+      }
+
       // Calculate age from date of birth
       const age = calculateAge(data.dateOfBirth)
 
       // Convert form data to HealthDataInput
       const healthData = {
-        userId: session?.user?.id,
+        userId: session.user.id,
         name: data.name,
         dateOfBirth: data.dateOfBirth.toISOString(),
         age,

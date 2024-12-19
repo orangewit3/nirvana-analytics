@@ -51,7 +51,12 @@ export async function storeHealthData(userId: string, data: HealthDataInput) {
 export async function getHealthData(userId: string) {
   const db = await getDb()
   const collection = db.collection<HealthDataInput>('healthDataInputs')
-  return await collection.findOne({ userId })
+  
+  // Log the query for debugging
+  
+  const result = await collection.findOne({ userId })
+  
+  return result
 }
 
 // Helper functions for healthAnalyses collection
@@ -72,10 +77,15 @@ export async function storeHealthAnalysis(userId: string, analysis: HealthAnalys
 export async function getHealthAnalysis(userId: string) {
   const db = await getDb()
   const collection = db.collection<HealthAnalysis>('healthAnalyses')
-  return await collection.findOne(
+  
+  // Log the query for debugging
+  
+  const result = await collection.findOne(
     { userId },
-    { sort: { createdAt: -1 } } // Get the most recent analysis
+    { sort: { createdAt: -1 } }
   )
+  
+  return result
 }
 
 // Export a module-scoped MongoClient promise

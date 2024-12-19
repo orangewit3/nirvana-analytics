@@ -13,7 +13,7 @@ export async function GET(req: Request) {
       )
     }
 
-    // Get both health data and analysis from MongoDB
+    // Get both health data and the most recent analysis from MongoDB
     const [healthData, analysis] = await Promise.all([
       getHealthData(userId),
       getHealthAnalysis(userId)
@@ -21,14 +21,16 @@ export async function GET(req: Request) {
 
     if (!healthData || !analysis) {
       return NextResponse.json(
-        { error: 'Data not found' },
+        { error: 'No analysis found' },
         { status: 404 }
       )
     }
 
+    // Add timestamp to the response
     return NextResponse.json({
       healthData,
-      analysis
+      analysis,
+      timestamp: analysis.createdAt
     })
   } catch (error) {
     console.error('Results error:', error)

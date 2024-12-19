@@ -106,3 +106,15 @@ export const healthAnalysisSchema = z.object({
 })
 
 export type HealthAnalysis = z.infer<typeof healthAnalysisSchema>
+
+export async function hasExistingAnalysis(userId: string): Promise<boolean> {
+  try {
+    const response = await fetch(`/api/results?userId=${userId}`)
+    if (!response.ok) return false
+    const data = await response.json()
+    return !!(data.healthData && data.analysis)
+  } catch (error) {
+    console.error('Error checking existing analysis:', error)
+    return false
+  }
+}

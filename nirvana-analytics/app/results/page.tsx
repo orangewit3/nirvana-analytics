@@ -13,6 +13,7 @@ export default function ResultsPage() {
   const [analysis, setAnalysis] = useState<HealthAnalysis | null>(null)
   const [healthData, setHealthData] = useState<HealthDataInput | null>(null)
   const [error, setError] = useState<string>('')
+  const [analysisDate, setAnalysisDate] = useState<Date | null>(null)
 
   useEffect(() => {
     async function fetchData() {
@@ -22,7 +23,6 @@ export default function ResultsPage() {
           throw new Error('No userId provided')
         }
 
-        // Fetch data from API instead of direct MongoDB access
         const response = await fetch(`/api/results?userId=${userId}`)
         if (!response.ok) {
           throw new Error('Failed to fetch results')
@@ -31,6 +31,7 @@ export default function ResultsPage() {
         const data = await response.json()
         setHealthData(data.healthData)
         setAnalysis(data.analysis)
+        setAnalysisDate(new Date(data.timestamp))
       } catch (error) {
         console.error('Results page error:', error)
         setError(error.message || 'Failed to load analysis results')
@@ -92,6 +93,10 @@ export default function ResultsPage() {
     return (weight / Math.pow(height / 100, 2)).toFixed(1)
   }
 
+  const handleNewAnalysis = () => {
+    window.location.href = '/?new=true'
+  }
+
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
@@ -119,11 +124,27 @@ export default function ResultsPage() {
 
   return (
     <main className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="flex justify-end mb-6">
+        <Button 
+          onClick={handleNewAnalysis}
+          variant="outline"
+        >
+          Start New Analysis
+        </Button>
+      </div>
+
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Your Health Analysis</h1>
-        <p className="text-muted-foreground">
-          Analysis based on your health data and blood report
-        </p>
+        <div className="flex justify-between items-center">
+          <p className="text-muted-foreground">
+            Analysis based on your health data and blood report
+          </p>
+          {analysisDate && (
+            <p className="text-sm text-muted-foreground">
+              Analyzed on: {formatDate(analysisDate)}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Enhanced Patient Info Summary */}
