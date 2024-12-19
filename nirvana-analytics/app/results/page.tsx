@@ -73,6 +73,18 @@ export default function ResultsPage() {
     }
   }
 
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
+
+  const calculateBMI = (weight: number, height: number) => {
+    return (weight / Math.pow(height / 100, 2)).toFixed(1)
+  }
+
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
@@ -91,11 +103,11 @@ export default function ResultsPage() {
   }
 
   const categories = [
-    { key: 'overallHealthScore', title: 'Overall Health Score' },
-    { key: 'cholesterolLevels', title: 'Cholesterol Levels' },
-    { key: 'diabetesRisk', title: 'Diabetes Risk' },
-    { key: 'fattyLiverRisk', title: 'Fatty Liver Risk' },
-    { key: 'hypertensionRisk', title: 'Hypertension Risk' },
+    { key: 'overallHealthScore', title: 'Overall Health Score', system: 'systemA' },
+    { key: 'cholesterolLevels', title: 'Cholesterol Levels', system: 'systemB' },
+    { key: 'diabetesRisk', title: 'Diabetes Risk', system: 'systemB' },
+    { key: 'fattyLiverRisk', title: 'Fatty Liver Risk', system: 'systemB' },
+    { key: 'hypertensionRisk', title: 'Hypertension Risk', system: 'systemB' },
   ] as const
 
   return (
@@ -107,13 +119,25 @@ export default function ResultsPage() {
         </p>
       </div>
 
-      {/* Patient Info Summary */}
-      <div className="mb-8 p-4 bg-muted/50 rounded-lg">
-        <h2 className="font-semibold mb-2">Patient Information</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+      {/* Enhanced Patient Info Summary */}
+      <div className="mb-8 p-6 bg-muted/50 rounded-lg">
+        <h2 className="font-semibold mb-4 text-lg">Patient Information</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-muted-foreground">Name:</span>{' '}
+            {healthData.name}
+          </div>
+          <div>
+            <span className="text-muted-foreground">Date of Birth:</span>{' '}
+            {formatDate(new Date(healthData.dateOfBirth))}
+          </div>
           <div>
             <span className="text-muted-foreground">Age:</span>{' '}
             {healthData.age} years
+          </div>
+          <div>
+            <span className="text-muted-foreground">Sex:</span>{' '}
+            {healthData.sex === 'M' ? 'Male' : 'Female'}
           </div>
           <div>
             <span className="text-muted-foreground">Height:</span>{' '}
@@ -123,16 +147,44 @@ export default function ResultsPage() {
             <span className="text-muted-foreground">Weight:</span>{' '}
             {healthData.weight} kg
           </div>
+          <div>
+            <span className="text-muted-foreground">BMI:</span>{' '}
+            {calculateBMI(healthData.weight, healthData.height)}
+          </div>
+          <div>
+            <span className="text-muted-foreground">Location:</span>{' '}
+            {healthData.area}{healthData.otherArea ? ` - ${healthData.otherArea}` : ''}
+          </div>
+          {healthData.bloodPressure?.systolic && (
+            <div>
+              <span className="text-muted-foreground">Blood Pressure:</span>{' '}
+              {healthData.bloodPressure.systolic}/{healthData.bloodPressure.diastolic} mmHg
+            </div>
+          )}
+          {healthData.chronicConditions?.length > 0 && (
+            <div className="col-span-2">
+              <span className="text-muted-foreground">Chronic Conditions:</span>{' '}
+              {healthData.chronicConditions.join(', ')}
+              {healthData.otherChronicCondition && ` - ${healthData.otherChronicCondition}`}
+            </div>
+          )}
+          {healthData.allergies && (
+            <div className="col-span-2">
+              <span className="text-muted-foreground">Allergies:</span>{' '}
+              {healthData.allergies}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Health Score Widgets Grid */}
       <div className="grid gap-6 sm:grid-cols-2">
-        {categories.map(({ key, title }) => (
+        {categories.map(({ key, title, system }) => (
           <HealthScoreWidget
             key={key}
             title={title}
             score={analysis[key].score}
+            scoringSystem={system}
             explanation={analysis[key].explanation}
           />
         ))}

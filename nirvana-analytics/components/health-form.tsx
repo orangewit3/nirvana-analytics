@@ -10,6 +10,18 @@ import { PdfUpload } from './pdf-upload'
 import { healthFormSchema, type HealthFormValues, type HealthDataInput } from '@/lib/utils'
 import { nanoid } from 'nanoid'
 
+function calculateAge(birthDate: Date): number {
+  const today = new Date()
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const monthDiff = today.getMonth() - birthDate.getMonth()
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--
+  }
+  
+  return age
+}
+
 export function HealthForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [parsedPdfText, setParsedPdfText] = useState<string>('')
@@ -18,10 +30,15 @@ export function HealthForm() {
   const form = useForm<HealthFormValues>({
     resolver: zodResolver(healthFormSchema),
     defaultValues: {
-      age: 0,
+      name: '',
       height: 0,
       weight: 0,
       weightUnit: 'kg',
+      chronicConditions: [],
+      bloodPressure: {
+        systolic: undefined,
+        diastolic: undefined,
+      },
     },
   })
 
@@ -74,15 +91,15 @@ export function HealthForm() {
       setError('')
       setIsLoading(true)
 
-      // Validate that we have PDF text if a file was uploaded
-      if (data.bloodReport && !parsedPdfText) {
-        throw new Error('Please wait for PDF processing to complete or try uploading again')
-      }
+      // Calculate age from date of birth
+      const age = calculateAge(data.dateOfBirth)
 
       // Convert form data to HealthDataInput
       const healthData: HealthDataInput = {
         patientId: nanoid(),
-        age: data.age,
+        name: data.name,
+        dateOfBirth: data.dateOfBirth,
+        age,
         height: data.height,
         weight: data.weight,
         bloodReportText: parsedPdfText || '',
