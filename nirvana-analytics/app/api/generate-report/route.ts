@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server'
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import OpenAI from 'openai'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -63,7 +65,24 @@ Format each section with clear headings and detailed, actionable insights.`
 
 export async function POST(req: NextRequest) {
   try {
+    // Get the authenticated session
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401 }
+      )
+    }
+
     const { healthData, analysis } = await req.json()
+
+    // Verify the healthData belongs to the authenticated user
+    if (healthData.userId !== session.user.id) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden' }),
+        { status: 403 }
+      )
+    }
 
     // Generate the report content using OpenAI
     const reportContent = await generateReportContent(healthData, analysis)

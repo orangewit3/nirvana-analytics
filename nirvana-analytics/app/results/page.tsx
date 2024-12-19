@@ -24,6 +24,14 @@ export default function ResultsPage() {
         }
 
         const response = await fetch(`/api/results?userId=${userId}`)
+        if (response.status === 401) {
+          router.push('/login')
+          return
+        }
+        if (response.status === 403) {
+          router.push('/')
+          return
+        }
         if (!response.ok) {
           throw new Error('Failed to fetch results')
         }
