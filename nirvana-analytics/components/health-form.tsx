@@ -8,7 +8,7 @@ import { Form } from '@/components/ui/form'
 import { HealthFormFields } from './health-form-fields'
 import { PdfUpload } from './pdf-upload'
 import { healthFormSchema, type HealthFormValues, type HealthDataInput } from '@/lib/utils'
-import { nanoid } from 'nanoid'
+import { useSession } from 'next-auth/react'
 
 function calculateAge(birthDate: Date): number {
   const today = new Date()
@@ -26,6 +26,7 @@ export function HealthForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [parsedPdfText, setParsedPdfText] = useState<string>('')
   const [error, setError] = useState<string>('')
+  const { data: session } = useSession()
 
   const form = useForm<HealthFormValues>({
     resolver: zodResolver(healthFormSchema),
@@ -95,9 +96,8 @@ export function HealthForm() {
       const age = calculateAge(data.dateOfBirth)
 
       // Convert form data to HealthDataInput
-      const userId = nanoid()
       const healthData = {
-        userId,
+        userId: session?.user?.id,
         name: data.name,
         dateOfBirth: data.dateOfBirth.toISOString(),
         age,
@@ -131,7 +131,7 @@ export function HealthForm() {
       }
 
       // Send userId for analysis
-      const response = await fetch(`/api/analyze?userId=${userId}`, {
+      const response = await fetch(`/api/analyze?userId=${session?.user?.id}`, {
         method: 'POST',
       })
 
@@ -140,7 +140,7 @@ export function HealthForm() {
       }
 
       // Redirect to results page with userId
-      window.location.href = `/results?userId=${userId}`
+      window.location.href = `/results?userId=${session?.user?.id}`
     } catch (error) {
       console.error('Submit error:', error)
       setError(error.message || 'An error occurred. Please try again.')
