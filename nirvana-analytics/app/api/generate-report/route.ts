@@ -1,10 +1,22 @@
 import { NextRequest } from 'next/server'
-import PDFDocument from 'pdfkit'
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
+
+function sanitizeText(text: string): string {
+  if (!text) return '';
+  
+  return text
+    .replace(/\u0000/g, '') // Remove null characters
+    .replace(/[μ]/g, 'u')
+    .replace(/[^\x20-\x7E]/g, '') // Only keep printable ASCII characters
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .trim();
+}
 
 async function generateReportContent(healthData: any, analysis: any) {
   const prompt = `Generate a comprehensive health report based on the following data:
@@ -45,6 +57,7 @@ Format each section with clear headings and detailed, actionable insights.`
     model: "gpt-4o",
   })
 
+
   return completion.choices[0].message.content || ''
 }
 
@@ -56,46 +69,74 @@ export async function POST(req: NextRequest) {
     const reportContent = await generateReportContent(healthData, analysis)
 
     // Create a new PDF document
-    const doc = new PDFDocument({
-      size: 'A4',
-      margin: 50,
-      bufferPages: true, // Enable page buffering for page numbers
+    const doc = await PDFDocument.create()
+    
+    // Add a new page
+    const page = doc.addPage()
+    const { width, height } = page.getSize()
+    
+    // Embed the standard font
+    const font = await doc.embedFont(StandardFonts.TimesRoman)
+    const boldFont = await doc.embedFont(StandardFonts.TimesRomanBold)
+    
+    // Define text settings
+    const fontSize = 12
+    const titleSize = 24
+    const headerSize = 16
+    const margin = 50
+    let currentY = height - margin
+
+    // Helper function to add text and return new Y position
+    const addText = (text: string, options: { 
+      fontSize?: number, 
+      font?: typeof font,
+      indent?: number 
+    } = {}) => {
+      if (!text) return currentY;
+      
+      const actualFont = options.font || font;
+      const actualSize = options.fontSize || fontSize;
+      const indent = options.indent || 0;
+      
+      const sanitizedText = sanitizeText(text);
+      
+      if (sanitizedText && sanitizedText.length > 0) {
+        page.drawText(sanitizedText, {
+          x: margin + indent,
+          y: currentY,
+          size: actualSize,
+          font: actualFont,
+          color: rgb(0, 0, 0),
+        });
+      }
+      
+      currentY -= actualSize * 1.5;
+      return currentY;
+    };
+
+    // Add title
+    addText('Comprehensive Health Analysis Report', { 
+      fontSize: titleSize, 
+      font: boldFont 
     })
-
-    // Create a buffer to store the PDF
-    const chunks: Buffer[] = []
-    doc.on('data', (chunk) => chunks.push(chunk))
-
-    // Add content to the PDF
-    // Header
-    doc
-      .fontSize(24)
-      .text('Comprehensive Health Analysis Report', { align: 'center' })
-      .moveDown()
-      .fontSize(12)
-      .text(`Generated on: ${new Date().toLocaleDateString()}`)
-      .moveDown()
-      .text(`Patient ID: ${healthData.patientId}`)
-      .moveDown(2)
-
-    // Patient Information
-    doc
-      .fontSize(16)
-      .text('Patient Information')
-      .moveDown()
-      .fontSize(12)
-      .text(`Age: ${healthData.age} years`)
-      .text(`Height: ${healthData.height} cm`)
-      .text(`Weight: ${healthData.weight} kg`)
-      .text(`BMI: ${(healthData.weight / Math.pow(healthData.height / 100, 2)).toFixed(1)}`)
-      .moveDown(2)
-
-    // Health Scores Summary
-    doc
-      .fontSize(16)
-      .text('Health Scores Summary')
-      .moveDown()
-
+    
+    // Add date and patient ID
+    currentY -= 20
+    addText(`Generated on: ${new Date().toLocaleDateString()}`)
+    addText(`Patient ID: ${healthData.patientId}`)
+    
+    // Add patient information
+    currentY -= 20
+    addText('Patient Information', { fontSize: headerSize, font: boldFont })
+    addText(`Age: ${healthData.age} years`)
+    addText(`Height: ${healthData.height} cm`)
+    addText(`Weight: ${healthData.weight} kg`)
+    addText(`BMI: ${(healthData.weight / Math.pow(healthData.height / 100, 2)).toFixed(1)}`)
+    
+    // Add health scores
+    currentY -= 20
+    addText('Health Scores Summary', { fontSize: headerSize, font: boldFont })
+    
     const categories = [
       { key: 'overallHealthScore', title: 'Overall Health Score' },
       { key: 'cholesterolLevels', title: 'Cholesterol Levels' },
@@ -106,74 +147,36 @@ export async function POST(req: NextRequest) {
 
     categories.forEach(({ key, title }) => {
       const score = analysis[key]
-      doc
-        .fontSize(14)
-        .text(title)
-        .fontSize(12)
-        .text(`Score: ${score.score}/10`)
-        .text(`Analysis: ${score.explanation}`)
-        .moveDown()
+      currentY -= 10
+      addText(sanitizeText(title), { fontSize: 14, font: boldFont })
+      addText(sanitizeText(`Score: ${score.score}/10`), { indent: 10 })
+      addText(sanitizeText(`Analysis: ${score.explanation}`), { indent: 10 })
     })
 
-    // Add the AI-generated comprehensive report
-    doc
-      .moveDown()
-      .fontSize(16)
-      .text('Comprehensive Analysis')
-      .moveDown()
-      .fontSize(12)
-      .text(reportContent, {
-        align: 'justify',
-        columns: 1,
-      })
+    // Add the comprehensive report
+    currentY -= 20
+    addText('Comprehensive Analysis', { fontSize: headerSize, font: boldFont })
+    
+    // Split report content into paragraphs and add them
+    const paragraphs = reportContent.split('\n\n')
+    paragraphs.forEach(paragraph => {
+      // Check if we need a new page
+      if (currentY < margin) {
+        const newPage = doc.addPage()
+        currentY = height - margin
+      }
+      addText(sanitizeText(paragraph))
+      currentY -= 10
+    })
 
-    // Blood Report Analysis (if available)
-    if (healthData.bloodReportText) {
-      doc
-        .addPage()
-        .fontSize(16)
-        .text('Blood Report Details')
-        .moveDown()
-        .fontSize(12)
-        .text(healthData.bloodReportText)
-        .moveDown(2)
-    }
+    // Serialize the PDF to bytes
+    const pdfBytes = await doc.save()
 
-    // Add page numbers to all pages
-    const range = doc.bufferedPageRange()
-    for (let i = range.start; i < range.start + range.count; i++) {
-      doc.switchToPage(i)
-      doc
-        .fontSize(10)
-        .text(
-          `Page ${i + 1} of ${range.count}`,
-          0,
-          doc.page.height - 50,
-          { align: 'center' }
-        )
-    }
-
-    // Set metadata
-    doc.info.Title = 'Comprehensive Health Analysis Report'
-    doc.info.Author = 'Health Analysis System'
-
-    // Finalize the PDF
-    doc.end()
-
-    // Wait for all chunks to be collected
-    return new Promise((resolve, reject) => {
-      const chunks: Buffer[] = []
-      doc.on('data', chunks.push.bind(chunks))
-      doc.on('end', () => {
-        const pdfBuffer = Buffer.concat(chunks)
-        resolve(new Response(pdfBuffer, {
-          headers: {
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': 'attachment; filename=health-report.pdf',
-          },
-        }))
-      })
-      doc.on('error', reject)
+    return new Response(pdfBytes, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename=health-report.pdf',
+      },
     })
 
   } catch (error) {
