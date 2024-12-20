@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
+import type { NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
-  // Get the pathname of the request
+export async function GET(request: NextRequest) {
   const path = request.nextUrl.pathname
-
+  
   // Public paths that don't require authentication
   const publicPaths = ['/login', '/register']
   const isPublicPath = publicPaths.includes(path)
@@ -19,27 +18,13 @@ export async function middleware(request: NextRequest) {
   // Redirect logic
   if (!token && !isPublicPath) {
     // Redirect to login if trying to access protected route without token
-    return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.json({ redirect: '/login' })
   }
 
   if (token && isPublicPath) {
     // Redirect to home if trying to access login/register while authenticated
-    return NextResponse.redirect(new URL('/', request.url))
+    return NextResponse.json({ redirect: '/' })
   }
 
-  return NextResponse.next()
-}
-
-// Configure which routes to run middleware on
-export const config = {
-  matcher: [
-    '/',
-    '/login',
-    '/register',
-    '/results',
-    '/api/results/:path*',
-    '/api/generate-report/:path*',
-    '/api/analyze/:path*',
-  ],
-  runtime: 'nodejs'
+  return NextResponse.json({ ok: true })
 } 

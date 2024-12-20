@@ -23,6 +23,9 @@ const nextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production', // Remove console.logs in production
   },
+  experimental: {
+    runtime: 'nodejs',
+  },
 }
 
 export default nextConfig
