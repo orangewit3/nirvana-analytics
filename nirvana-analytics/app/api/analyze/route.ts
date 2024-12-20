@@ -3,8 +3,14 @@ import { getHealthData, storeHealthAnalysis } from '@/lib/db'
 import { healthAnalysisSchema } from '@/lib/utils'
 import OpenAI from 'openai'
 
+// Add error handling for missing API key
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error('OPENAI_API_KEY is not configured')
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  timeout: 30000, // Add timeout for Vercel
 })
 
 export async function POST(req: NextRequest) {

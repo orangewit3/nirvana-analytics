@@ -5,6 +5,19 @@ import clientPromise from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { getDb } from '@/lib/db'
 
+// Add environment variable validation
+const requiredEnvVars = [
+  'NEXTAUTH_SECRET',
+  'MONGODB_URI',
+  'NEXTAUTH_URL',
+]
+
+requiredEnvVars.forEach(envVar => {
+  if (!process.env[envVar]) {
+    throw new Error(`${envVar} is not configured`)
+  }
+})
+
 export const authOptions: NextAuthOptions = {
   adapter: MongoDBAdapter(clientPromise),
   providers: [
@@ -66,4 +79,15 @@ export const authOptions: NextAuthOptions = {
     }
   },
   secret: process.env.NEXTAUTH_SECRET,
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    }
+  }
 } 

@@ -11,8 +11,13 @@ const nextConfig = {
     }
     return config
   },
-  experimental: {
-  }
+  // Add Vercel-specific settings
+  poweredByHeader: false, // Remove X-Powered-By header
+  reactStrictMode: true,
+  swcMinify: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production', // Remove console.logs in production
+  },
 }
 
 export default nextConfig
