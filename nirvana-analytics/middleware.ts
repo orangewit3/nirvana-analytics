@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getToken } from 'next-auth/jwt'
 
 export async function middleware(request: NextRequest) {
   // Get the pathname of the request
@@ -10,19 +9,17 @@ export async function middleware(request: NextRequest) {
   const publicPaths = ['/login', '/register']
   const isPublicPath = publicPaths.includes(path)
 
-  // Get the token from the request
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  })
+  // Check for auth cookie instead of using getToken
+  const authCookie = request.cookies.get('next-auth.session-token')?.value || 
+                    request.cookies.get('__Secure-next-auth.session-token')?.value
 
   // Redirect logic
-  if (!token && !isPublicPath) {
+  if (!authCookie && !isPublicPath) {
     // Redirect to login if trying to access protected route without token
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (token && isPublicPath) {
+  if (authCookie && isPublicPath) {
     // Redirect to home if trying to access login/register while authenticated
     return NextResponse.redirect(new URL('/', request.url))
   }
@@ -40,6 +37,5 @@ export const config = {
     '/api/results/:path*',
     '/api/generate-report/:path*',
     '/api/analyze/:path*',
-  ],
-  runtime: 'nodejs'
+  ]
 } 
