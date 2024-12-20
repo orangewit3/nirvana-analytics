@@ -89,9 +89,7 @@ export async function POST(req: NextRequest) {
 
     // Create a new PDF document
     const doc = await PDFDocument.create()
-    
-    // Add a new page
-    const page = doc.addPage()
+    let page = doc.addPage()
     const { width, height } = page.getSize()
     
     // Embed the standard font
@@ -109,34 +107,84 @@ export async function POST(req: NextRequest) {
     const addText = (text: string, options: { 
       fontSize?: number, 
       font?: typeof font,
-      indent?: number 
+      indent?: number,
+      maxWidth?: number 
     } = {}) => {
       if (!text) return currentY;
       
       const actualFont = options.font || font;
       const actualSize = options.fontSize || fontSize;
       const indent = options.indent || 0;
+      const maxWidth = options.maxWidth || width - (2 * margin);
       
       const sanitizedText = sanitizeText(text);
       
       if (sanitizedText && sanitizedText.length > 0) {
-        page.drawText(sanitizedText, {
-          x: margin + indent,
-          y: currentY,
-          size: actualSize,
-          font: actualFont,
-          color: rgb(0, 0, 0),
-        });
+        // Calculate if we need a new page
+        if (currentY < margin + actualSize) {
+          page = doc.addPage();
+          currentY = height - margin;
+        }
+
+        // Split text into words
+        const words = sanitizedText.split(' ');
+        let line = '';
+        let yPos = currentY;
+
+        for (let i = 0; i < words.length; i++) {
+          const testLine = line + (line ? ' ' : '') + words[i];
+          const textWidth = actualFont.widthOfTextAtSize(testLine, actualSize);
+          
+          if (textWidth > maxWidth) {
+            // Draw the current line
+            if (yPos < margin + actualSize) {
+              page = doc.addPage();
+              yPos = height - margin;
+            }
+            
+            page.drawText(line, {
+              x: margin + indent,
+              y: yPos,
+              size: actualSize,
+              font: actualFont,
+              color: rgb(0, 0, 0),
+            });
+            
+            line = words[i];
+            yPos -= actualSize * 1.5;
+          } else {
+            line = testLine;
+          }
+        }
+
+        // Draw remaining text
+        if (line) {
+          if (yPos < margin + actualSize) {
+            page = doc.addPage();
+            yPos = height - margin;
+          }
+          
+          page.drawText(line, {
+            x: margin + indent,
+            y: yPos,
+            size: actualSize,
+            font: actualFont,
+            color: rgb(0, 0, 0),
+          });
+          yPos -= actualSize * 1.5;
+        }
+
+        currentY = yPos;
       }
       
-      currentY -= actualSize * 1.5;
       return currentY;
     };
 
     // Add title
     addText('Comprehensive Health Analysis Report', { 
       fontSize: titleSize, 
-      font: boldFont 
+      font: boldFont,
+      maxWidth: width - (2 * margin)
     })
     
     // Add date and patient ID
@@ -169,7 +217,10 @@ export async function POST(req: NextRequest) {
       currentY -= 10
       addText(sanitizeText(title), { fontSize: 14, font: boldFont })
       addText(sanitizeText(`Score: ${score.score}/10`), { indent: 10 })
-      addText(sanitizeText(`Analysis: ${score.explanation}`), { indent: 10 })
+      addText(sanitizeText(`Analysis: ${score.explanation}`), { 
+        indent: 10,
+        maxWidth: width - (2 * margin + 10)
+      })
     })
 
     // Add the comprehensive report
@@ -179,14 +230,24 @@ export async function POST(req: NextRequest) {
     // Split report content into paragraphs and add them
     const paragraphs = reportContent.split('\n\n')
     paragraphs.forEach(paragraph => {
-      // Check if we need a new page
-      if (currentY < margin) {
-        const newPage = doc.addPage()
-        currentY = height - margin
-      }
-      addText(sanitizeText(paragraph))
+      addText(sanitizeText(paragraph), {
+        maxWidth: width - (2 * margin)
+      })
       currentY -= 10
     })
+
+    // Add page numbers
+    const pageCount = doc.getPageCount()
+    for (let i = 0; i < pageCount; i++) {
+      const pageNum = doc.getPage(i)
+      pageNum.drawText(`Page ${i + 1} of ${pageCount}`, {
+        x: margin,
+        y: margin / 2,
+        size: 10,
+        font: font,
+        color: rgb(0, 0, 0),
+      })
+    }
 
     // Serialize the PDF to bytes
     const pdfBytes = await doc.save()
