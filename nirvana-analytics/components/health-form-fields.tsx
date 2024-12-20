@@ -55,7 +55,9 @@ export function HealthFormFields({ form }: HealthFormFieldsProps) {
             <FormControl>
               <DatePicker
                 selected={field.value}
-                onChange={(date: Date) => field.onChange(date)}
+                onChange={(date: Date | null) => {
+                  if (date) field.onChange(date)
+                }}
                 dateFormat="MMMM d, yyyy"
                 showMonthDropdown
                 showYearDropdown

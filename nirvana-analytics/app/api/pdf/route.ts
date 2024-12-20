@@ -7,11 +7,8 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData()
     const file = formData.get('file')
     
-    if (!file) {
-      return Response.json(
-        { error: 'No file provided' },
-        { status: 400 }
-      )
+    if (!file || !(file instanceof File)) {
+      return Response.json({ error: 'No file provided' }, { status: 400 })
     }
 
     // Convert file to buffer

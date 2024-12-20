@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { HealthScoreWidget } from '@/components/health-score-widget'
 import { Button } from '@/components/ui/button'
 import type { HealthAnalysis, HealthDataInput } from '@/lib/utils'
+import { calculateAge } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 
 export default function ResultsPage() {
@@ -42,7 +43,7 @@ export default function ResultsPage() {
         setAnalysisDate(new Date(data.timestamp))
       } catch (error) {
         console.error('Results page error:', error)
-        setError(error.message || 'Failed to load analysis results')
+        setError((error as Error).message || 'Failed to load analysis results')
         setTimeout(() => router.push('/'), 2000)
       }
     }
@@ -169,7 +170,7 @@ export default function ResultsPage() {
           </div>
           <div>
             <span className="text-muted-foreground">Age:</span>{' '}
-            {healthData.age} years
+            {calculateAge(healthData.dateOfBirth)} years
           </div>
           <div>
             <span className="text-muted-foreground">Sex:</span>{' '}
@@ -189,7 +190,7 @@ export default function ResultsPage() {
           </div>
           <div>
             <span className="text-muted-foreground">Location:</span>{' '}
-            {healthData.area}{healthData.otherArea ? ` - ${healthData.otherArea}` : ''}
+            {healthData.address.area}{healthData.address.otherArea ? ` - ${healthData.address.otherArea}` : ''}
           </div>
           {healthData.bloodPressure?.systolic && (
             <div>

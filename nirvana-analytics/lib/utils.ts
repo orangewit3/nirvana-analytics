@@ -103,6 +103,7 @@ export const healthAnalysisSchema = z.object({
   diabetesRisk: healthScoreCategorySchema,
   fattyLiverRisk: healthScoreCategorySchema,
   hypertensionRisk: healthScoreCategorySchema,
+  createdAt: z.date().default(() => new Date())
 })
 
 export type HealthAnalysis = z.infer<typeof healthAnalysisSchema>
@@ -117,4 +118,18 @@ export async function hasExistingAnalysis(userId: string): Promise<boolean> {
     console.error('Error checking existing analysis:', error)
     return false
   }
+}
+
+export function calculateAge(birthDate: Date | string): number {
+  const today = new Date()
+  const birthDateTime = typeof birthDate === 'string' ? new Date(birthDate) : birthDate
+  
+  let age = today.getFullYear() - birthDateTime.getFullYear()
+  const monthDiff = today.getMonth() - birthDateTime.getMonth()
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDateTime.getDate())) {
+    age--
+  }
+  
+  return age
 }

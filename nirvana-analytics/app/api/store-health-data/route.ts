@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('Store health data error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to store health data' },
+      { error: (error as Error).message || 'Failed to store health data' },
       { status: 500 }
     )
   }

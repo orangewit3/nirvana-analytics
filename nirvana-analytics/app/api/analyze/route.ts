@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getHealthData, storeHealthAnalysis } from '@/lib/db'
-import { healthAnalysisSchema } from '@/lib/utils'
+import { healthAnalysisSchema, calculateAge } from '@/lib/utils'
 import OpenAI from 'openai'
 
 // Add error handling for missing API key
@@ -42,12 +42,11 @@ export async function POST(req: NextRequest) {
     const prompt = `Analyze the following health data and provide a structured analysis:
     
 Patient Information:
-- Age: ${healthData.age} years
+- Age: ${calculateAge(healthData.dateOfBirth)} years
 - Sex: ${healthData.sex}
 - Height: ${healthData.height} cm
 - Weight: ${healthData.weight} kg
 - BMI: ${bmi.toFixed(1)}
-- Location: ${healthData.area} 
 ${healthData.bloodPressure?.systolic ? `- Blood Pressure: ${healthData.bloodPressure.systolic}/${healthData.bloodPressure.diastolic} mmHg` : ''}
 ${healthData.chronicConditions?.length > 0 ? `- Chronic Conditions: ${healthData.chronicConditions.join(', ')}` : '- No Chronic Conditions'}
 ${healthData.otherChronicCondition ? `- Other Condition: ${healthData.otherChronicCondition}` : ''}
@@ -119,7 +118,8 @@ Example response format:
     const parsedAnalysis = JSON.parse(analysis)
     const validatedAnalysis = healthAnalysisSchema.parse({
       userId,
-      ...parsedAnalysis
+      ...parsedAnalysis,
+      createdAt: new Date()
     })
 
     // Store the analysis in MongoDB

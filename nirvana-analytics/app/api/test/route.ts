@@ -1,31 +1,38 @@
 import { NextResponse } from 'next/server'
 import { storeHealthData, storeHealthAnalysis, getHealthData, getHealthAnalysis } from '@/lib/db'
+import { CHRONIC_CONDITIONS } from '@/lib/utils'
 
 export async function GET() {
   try {
-    // Create dummy health data
+    const userId = 'test-user-123'
+    
+    // Create dummy health data matching HealthDataInput schema
     const dummyHealthData = {
-      patientId: 'test123',
+      userId,
       name: 'Test User',
       dateOfBirth: new Date('1990-01-01'),
-      age: 33,
       sex: 'M' as const,
       height: 175,
       weight: 70,
       address: {
         area: 'Menteng' as const,
+        otherArea: undefined,
       },
       bloodPressure: {
         systolic: 120,
         diastolic: 80,
       },
-      chronicConditions: ['None'],
+      // Use array instead of readonly tuple
+      chronicConditions: ['None'] as Array<typeof CHRONIC_CONDITIONS[number]>,
+      otherChronicCondition: undefined,
+      allergies: undefined,
       bloodReportText: 'Test blood report content',
       createdAt: new Date()
     }
 
-    // Create dummy analysis
+    // Create dummy analysis matching HealthAnalysis schema
     const dummyAnalysis = {
+      userId,
       overallHealthScore: {
         score: 8,
         scoringSystem: 'systemA' as const,
@@ -50,11 +57,11 @@ export async function GET() {
         score: 3,
         scoringSystem: 'systemB' as const,
         explanation: 'Moderate hypertension risk'
-      }
+      },
+      createdAt: new Date()
     }
 
     // Store both using our helper functions
-    const userId = 'test-user-123'
     const healthDataResult = await storeHealthData(userId, dummyHealthData)
     const analysisResult = await storeHealthAnalysis(userId, dummyAnalysis)
 
@@ -82,7 +89,7 @@ export async function GET() {
     return NextResponse.json(
       { 
         success: false,
-        error: error.message || 'Failed to store test data'
+        error: error instanceof Error ? error.message : 'Failed to store test data'
       },
       { status: 500 }
     )

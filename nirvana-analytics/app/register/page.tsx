@@ -45,7 +45,7 @@ export default function RegisterPage() {
       // Redirect to login page after successful registration
       router.push('/login')
     } catch (error) {
-      setError(error.message || 'An error occurred during registration')
+      setError((error as Error).message || 'An error occurred during registration')
     } finally {
       setIsLoading(false)
     }

@@ -80,7 +80,6 @@ export async function storeHealthAnalysis(userId: string, analysis: HealthAnalys
   const validatedAnalysis = healthAnalysisSchema.parse(analysis)
   
   return await collection.insertOne({
-    userId,
     ...validatedAnalysis,
     createdAt: new Date()
   })

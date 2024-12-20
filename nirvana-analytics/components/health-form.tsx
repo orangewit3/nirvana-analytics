@@ -7,20 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Form } from '@/components/ui/form'
 import { HealthFormFields } from './health-form-fields'
 import { PdfUpload } from './pdf-upload'
-import { healthFormSchema, type HealthFormValues, type HealthDataInput } from '@/lib/utils'
+import { healthFormSchema, type HealthFormValues, type HealthDataInput, calculateAge } from '@/lib/utils'
 import { useSession } from 'next-auth/react'
-
-function calculateAge(birthDate: Date): number {
-  const today = new Date()
-  let age = today.getFullYear() - birthDate.getFullYear()
-  const monthDiff = today.getMonth() - birthDate.getMonth()
-  
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--
-  }
-  
-  return age
-}
 
 export function HealthForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -80,7 +68,7 @@ export function HealthForm() {
       setParsedPdfText(result.text)
     } catch (error) {
       console.error('PDF upload error:', error)
-      setError(error.message || 'Failed to process PDF file. Please try again.')
+      setError((error as Error).message || 'Failed to process PDF file. Please try again.')
       // Reset the file input
       form.setValue('bloodReport', undefined)
     }
@@ -147,7 +135,7 @@ export function HealthForm() {
       window.location.href = `/results?userId=${session?.user?.id}`
     } catch (error) {
       console.error('Submit error:', error)
-      setError(error.message || 'An error occurred. Please try again.')
+      setError((error as Error).message || 'An error occurred. Please try again.')
     } finally {
       setIsLoading(false)
     }
