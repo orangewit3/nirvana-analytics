@@ -23,6 +23,9 @@ const nextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production', // Remove console.logs in production
   },
+  env: {
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  },
 }
 
 export default nextConfig

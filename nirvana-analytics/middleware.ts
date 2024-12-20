@@ -1,29 +1,20 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getToken } from 'next-auth/jwt'
+import { auth } from './auth' // We'll use the new Next-Auth v5 approach
 
 export async function middleware(request: NextRequest) {
-  // Get the pathname of the request
   const path = request.nextUrl.pathname
-
-  // Public paths that don't require authentication
   const publicPaths = ['/login', '/register']
   const isPublicPath = publicPaths.includes(path)
 
-  // Get the token from the request
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  })
+  // Use the new auth() function instead of getToken
+  const session = await auth()
 
-  // Redirect logic
-  if (!token && !isPublicPath) {
-    // Redirect to login if trying to access protected route without token
+  if (!session && !isPublicPath) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (token && isPublicPath) {
-    // Redirect to home if trying to access login/register while authenticated
+  if (session && isPublicPath) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
